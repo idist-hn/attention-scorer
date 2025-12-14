@@ -1,0 +1,113 @@
+syntax = "proto3";
+
+package attention;
+
+option go_package = "github.com/attention-detection/api-gateway/pkg/proto";
+
+// AI Processing Service
+service AttentionService {
+  // Process a single frame and return attention results
+  rpc ProcessFrame(FrameRequest) returns (FrameResponse);
+  
+  // Stream frames for real-time processing
+  rpc StreamFrames(stream FrameRequest) returns (stream FrameResponse);
+  
+  // Health check
+  rpc HealthCheck(HealthRequest) returns (HealthResponse);
+}
+
+// Frame request
+message FrameRequest {
+  string meeting_id = 1;
+  string participant_id = 2;
+  bytes frame_data = 3;           // JPEG/PNG encoded image
+  int64 timestamp = 4;            // Unix timestamp in milliseconds
+  int32 width = 5;
+  int32 height = 6;
+}
+
+// Frame response with attention results
+message FrameResponse {
+  string meeting_id = 1;
+  string participant_id = 2;
+  int64 timestamp = 3;
+  repeated FaceResult faces = 4;
+  float processing_time_ms = 5;
+  bool success = 6;
+  string error_message = 7;
+}
+
+// Individual face result
+message FaceResult {
+  int32 track_id = 1;
+  BoundingBox bbox = 2;
+  AttentionMetrics attention = 3;
+  HeadPose head_pose = 4;
+  GazeInfo gaze = 5;
+  EyeInfo eyes = 6;
+  repeated Alert alerts = 7;
+}
+
+// Bounding box
+message BoundingBox {
+  float x1 = 1;
+  float y1 = 2;
+  float x2 = 3;
+  float y2 = 4;
+  float confidence = 5;
+}
+
+// Attention metrics
+message AttentionMetrics {
+  float attention_score = 1;       // 0-100
+  float gaze_score = 2;            // 0-1
+  float head_pose_score = 3;       // 0-1
+  float eye_openness_score = 4;    // 0-1
+  float presence_score = 5;        // 0-1
+  string attention_level = 6;      // high/medium/low/very_low
+  bool is_attentive = 7;
+}
+
+// Head pose
+message HeadPose {
+  float yaw = 1;                   // degrees
+  float pitch = 2;
+  float roll = 3;
+}
+
+// Gaze information
+message GazeInfo {
+  float gaze_x = 1;                // normalized -1 to 1
+  float gaze_y = 2;
+  bool is_looking_at_camera = 3;
+}
+
+// Eye information
+message EyeInfo {
+  float left_ear = 1;              // Eye Aspect Ratio
+  float right_ear = 2;
+  float avg_ear = 3;
+  float perclos = 4;               // Percent of eye closure
+  bool is_blinking = 5;
+  bool is_drowsy = 6;
+}
+
+// Alert
+message Alert {
+  string alert_type = 1;           // not_attentive, looking_away, drowsy
+  string severity = 2;             // info, warning, critical
+  string message = 3;
+  float duration_seconds = 4;
+}
+
+// Health check
+message HealthRequest {}
+
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+  string device = 3;               // cpu/cuda
+  float gpu_memory_used_mb = 4;
+  int32 active_sessions = 5;
+}
+

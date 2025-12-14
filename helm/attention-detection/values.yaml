@@ -1,0 +1,144 @@
+# Default values for attention-detection
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+
+# Namespace
+namespace: attention-detection
+
+# Common settings
+image:
+  pullPolicy: IfNotPresent
+
+# AI Services
+faceDetection:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: attention/face-detection
+    tag: latest
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "500m"
+      nvidia.com/gpu: "1"
+    limits:
+      memory: "2Gi"
+      cpu: "2000m"
+      nvidia.com/gpu: "1"
+  service:
+    port: 50052
+
+pipelineOrchestrator:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: attention/pipeline-orchestrator
+    tag: latest
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  service:
+    port: 50051
+
+# API Gateway
+apiGateway:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: attention/api-gateway
+    tag: latest
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  service:
+    port: 8080
+
+# Web Dashboard
+webDashboard:
+  enabled: true
+  replicaCount: 2
+  image:
+    repository: attention/web-dashboard
+    tag: latest
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  service:
+    port: 3000
+
+# Ingress
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: attention.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: web-dashboard
+    - host: api.attention.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api-gateway
+  tls:
+    - secretName: attention-tls
+      hosts:
+        - attention.example.com
+        - api.attention.example.com
+
+# HPA
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+
+# Redis (using Bitnami subchart)
+redis:
+  enabled: true
+  architecture: standalone
+  auth:
+    enabled: false
+
+# PostgreSQL (using Bitnami subchart)
+postgresql:
+  enabled: true
+  auth:
+    database: attention_db
+    username: attention_user
+    password: change_me
+
+# Configuration
+config:
+  targetFps: 24
+  batchSize: 1
+  debug: false
+  logLevel: INFO
+  attention:
+    gazeWeight: 0.35
+    headPoseWeight: 0.30
+    eyeOpennessWeight: 0.20
+    presenceWeight: 0.15
+
+# Secrets
+secrets:
+  jwtSecret: change-me-in-production
+  apiKey: your-api-key
+

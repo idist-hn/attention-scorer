@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package gaze_tracking;
+
+option go_package = "github.com/attention-detection/api-gateway/pkg/proto/gaze_tracking";
+
+// Gaze Tracking Microservice
+service GazeTrackingService {
+  // Estimate gaze direction from landmarks
+  rpc EstimateGaze(GazeRequest) returns (GazeResponse);
+  
+  // Batch estimation
+  rpc BatchEstimate(BatchGazeRequest) returns (BatchGazeResponse);
+  
+  // Health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message GazeRequest {
+  string request_id = 1;
+  repeated Landmark landmarks = 2;
+}
+
+message Landmark {
+  int32 index = 1;
+  float x = 2;
+  float y = 3;
+  float z = 4;
+}
+
+message GazeResponse {
+  string request_id = 1;
+  GazeInfo gaze = 2;
+  float processing_time_ms = 3;
+  bool success = 4;
+  string error = 5;
+}
+
+message GazeInfo {
+  float gaze_x = 1;  // Normalized -1 to 1
+  float gaze_y = 2;
+  float left_iris_x = 3;
+  float left_iris_y = 4;
+  float right_iris_x = 5;
+  float right_iris_y = 6;
+  bool is_looking_at_camera = 7;
+  float gaze_angle = 8;  // Degrees from center
+}
+
+message BatchGazeRequest {
+  repeated GazeRequest requests = 1;
+}
+
+message BatchGazeResponse {
+  repeated GazeResponse responses = 1;
+}
+
+message HealthRequest {}
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+}
+

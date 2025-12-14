@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "attention-detection.fullname" . }}-config
+  labels:
+    {{- include "attention-detection.labels" . | nindent 4 }}
+data:
+  ATTENTION_TARGET_FPS: {{ .Values.config.targetFps | quote }}
+  ATTENTION_BATCH_SIZE: {{ .Values.config.batchSize | quote }}
+  ATTENTION_DEBUG: {{ .Values.config.debug | quote }}
+  ATTENTION_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  ATTENTION_ATTENTION__GAZE_WEIGHT: {{ .Values.config.attention.gazeWeight | quote }}
+  ATTENTION_ATTENTION__HEAD_POSE_WEIGHT: {{ .Values.config.attention.headPoseWeight | quote }}
+  ATTENTION_ATTENTION__EYE_OPENNESS_WEIGHT: {{ .Values.config.attention.eyeOpennessWeight | quote }}
+  ATTENTION_ATTENTION__PRESENCE_WEIGHT: {{ .Values.config.attention.presenceWeight | quote }}
+  {{- if .Values.redis.enabled }}
+  REDIS_HOST: {{ include "attention-detection.fullname" . }}-redis-master
+  REDIS_PORT: "6379"
+  {{- end }}
+  {{- if .Values.postgresql.enabled }}
+  DATABASE_HOST: {{ include "attention-detection.fullname" . }}-postgresql
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: {{ .Values.postgresql.auth.database | quote }}
+  {{- end }}
+

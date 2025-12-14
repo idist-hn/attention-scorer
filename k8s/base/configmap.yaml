@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: attention-config
+  namespace: attention-detection
+data:
+  # AI Processor settings
+  ATTENTION_TARGET_FPS: "24"
+  ATTENTION_BATCH_SIZE: "1"
+  ATTENTION_DEBUG: "false"
+  ATTENTION_LOG_LEVEL: "INFO"
+  
+  # Face detection
+  ATTENTION_FACE_DETECTION__CONF_THRESHOLD: "0.5"
+  ATTENTION_FACE_DETECTION__IOU_THRESHOLD: "0.45"
+  ATTENTION_FACE_DETECTION__MAX_FACES: "20"
+  ATTENTION_FACE_DETECTION__DEVICE: "cuda"
+  
+  # Attention scoring weights
+  ATTENTION_ATTENTION__GAZE_WEIGHT: "0.35"
+  ATTENTION_ATTENTION__HEAD_POSE_WEIGHT: "0.30"
+  ATTENTION_ATTENTION__EYE_OPENNESS_WEIGHT: "0.20"
+  ATTENTION_ATTENTION__PRESENCE_WEIGHT: "0.15"
+  
+  # AI Service REST URLs for Pipeline Orchestrator
+  FACE_DETECTION_URL: "http://face-detection.attention-detection.svc.cluster.local:8052"
+  LANDMARK_DETECTION_URL: "http://landmark-detection.attention-detection.svc.cluster.local:8053"
+  HEAD_POSE_URL: "http://head-pose.attention-detection.svc.cluster.local:8054"
+  GAZE_TRACKING_URL: "http://gaze-tracking.attention-detection.svc.cluster.local:8055"
+  BLINK_DETECTION_URL: "http://blink-detection.attention-detection.svc.cluster.local:8056"
+  ATTENTION_SCORER_URL: "http://attention-scorer.attention-detection.svc.cluster.local:8057"
+
+  # Redis
+  REDIS_HOST: "redis.attention-detection.svc.cluster.local"
+  REDIS_PORT: "6379"
+  REDIS_URL: "redis://redis.attention-detection.svc.cluster.local:6379"
+  
+  # Database
+  DATABASE_HOST: "postgres.attention-detection.svc.cluster.local"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "attention_db"
+  DB_HOST: "postgres.attention-detection.svc.cluster.local"
+  DB_PORT: "5432"
+  DB_NAME: "attention_db"
+  DB_SSL_MODE: "disable"
+  
+  # API Gateway
+  API_PORT: "8080"
+  API_ENV: "production"
+

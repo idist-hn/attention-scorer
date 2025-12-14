@@ -1,0 +1,57 @@
+syntax = "proto3";
+
+package landmark_detection;
+
+option go_package = "github.com/attention-detection/api-gateway/pkg/proto/landmark_detection";
+
+// Landmark Detection Microservice
+service LandmarkDetectionService {
+  // Detect facial landmarks
+  rpc DetectLandmarks(LandmarkRequest) returns (LandmarkResponse);
+  
+  // Stream detection
+  rpc StreamDetect(stream LandmarkRequest) returns (stream LandmarkResponse);
+  
+  // Health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message LandmarkRequest {
+  string request_id = 1;
+  bytes frame_data = 2;
+  repeated BoundingBox faces = 3;  // Face regions to process
+}
+
+message BoundingBox {
+  float x1 = 1;
+  float y1 = 2;
+  float x2 = 3;
+  float y2 = 4;
+}
+
+message LandmarkResponse {
+  string request_id = 1;
+  repeated FaceLandmarks faces = 2;
+  float processing_time_ms = 3;
+  bool success = 4;
+  string error = 5;
+}
+
+message FaceLandmarks {
+  int32 face_index = 1;
+  repeated Landmark landmarks = 2;  // 478 landmarks for MediaPipe
+}
+
+message Landmark {
+  int32 index = 1;
+  float x = 2;
+  float y = 3;
+  float z = 4;
+}
+
+message HealthRequest {}
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+}
+

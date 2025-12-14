@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: attention-detection
+  labels:
+    app.kubernetes.io/name: attention-detection
+    app.kubernetes.io/part-of: attention-detection-system
+

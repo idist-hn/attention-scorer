@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+package blink_detection;
+
+option go_package = "github.com/attention-detection/api-gateway/pkg/proto/blink_detection";
+
+// Blink Detection Microservice
+service BlinkDetectionService {
+  // Analyze blink from landmarks
+  rpc AnalyzeBlink(BlinkRequest) returns (BlinkResponse);
+  
+  // Stream analysis with state tracking
+  rpc StreamAnalyze(stream BlinkRequest) returns (stream BlinkResponse);
+  
+  // Reset state for a track
+  rpc ResetTrack(ResetRequest) returns (ResetResponse);
+  
+  // Health check
+  rpc Health(HealthRequest) returns (HealthResponse);
+}
+
+message BlinkRequest {
+  string request_id = 1;
+  string track_id = 2;  // For state tracking across frames
+  repeated Landmark landmarks = 3;
+}
+
+message Landmark {
+  int32 index = 1;
+  float x = 2;
+  float y = 3;
+  float z = 4;
+}
+
+message BlinkResponse {
+  string request_id = 1;
+  BlinkInfo blink = 2;
+  float processing_time_ms = 3;
+  bool success = 4;
+  string error = 5;
+}
+
+message BlinkInfo {
+  float left_ear = 1;      // Left Eye Aspect Ratio
+  float right_ear = 2;     // Right Eye Aspect Ratio
+  float avg_ear = 3;       // Average EAR
+  float perclos = 4;       // Percent of eye closure (0-100)
+  bool is_blinking = 5;    // Current blink state
+  bool is_drowsy = 6;      // Drowsiness detected
+  int32 blink_count = 7;   // Total blinks counted
+  float blink_rate = 8;    // Blinks per minute
+}
+
+message ResetRequest {
+  string track_id = 1;
+}
+
+message ResetResponse {
+  bool success = 1;
+}
+
+message HealthRequest {}
+message HealthResponse {
+  bool healthy = 1;
+  string version = 2;
+}
+

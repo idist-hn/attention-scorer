@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-orchestrator
+  namespace: attention-detection
+  labels:
+    app: pipeline-orchestrator
+    component: ai-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipeline-orchestrator
+  template:
+    metadata:
+      labels:
+        app: pipeline-orchestrator
+        component: ai-service
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: pipeline-orchestrator
+          image: registry.idist.dev/attention/pipeline-orchestrator:latest
+          ports:
+            - containerPort: 50051
+              name: grpc
+            - containerPort: 8051
+              name: http
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          envFrom:
+            - configMapRef:
+                name: attention-config
+            - secretRef:
+                name: attention-secrets
+          env:
+            - name: FACE_DETECTION_HOST
+              value: "face-detection:50052"
+            - name: LANDMARK_DETECTION_HOST
+              value: "landmark-detection:50053"
+            - name: HEAD_POSE_HOST
+              value: "head-pose:50054"
+            - name: GAZE_TRACKING_HOST
+              value: "gaze-tracking:50055"
+            - name: BLINK_DETECTION_HOST
+              value: "blink-detection:50056"
+            - name: ATTENTION_SCORER_HOST
+              value: "attention-scorer:50057"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8051
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8051
+            initialDelaySeconds: 30
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pipeline-orchestrator
+  namespace: attention-detection
+spec:
+  selector:
+    app: pipeline-orchestrator
+  ports:
+    - port: 50051
+      targetPort: 50051
+      name: grpc
+    - port: 8051
+      targetPort: 8051
+      name: http
+  type: ClusterIP
+

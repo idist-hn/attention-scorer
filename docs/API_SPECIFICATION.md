@@ -1,0 +1,290 @@
+# API Specification
+
+## 1. Tổng quan
+
+| Protocol | Port | Mục đích |
+|----------|------|----------|
+| REST API | 8080 | CRUD operations, authentication |
+| WebSocket | 8080 | Real-time video streaming, attention updates |
+| gRPC | 50051 | Internal communication (Gateway ↔ AI Service) |
+
+## 2. REST API Endpoints
+
+### 2.1 Authentication
+
+#### POST /api/v1/auth/register
+Đăng ký tài khoản mới.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123",
+  "full_name": "John Doe"
+}
+```
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+#### POST /api/v1/auth/login
+Đăng nhập và nhận JWT token.
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "securePassword123"
+}
+```
+
+**Response:** `200 OK`
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIs...",
+  "refresh_token": "eyJhbGciOiJIUzI1NiIs...",
+  "expires_in": 3600
+}
+```
+
+### 2.2 Meetings
+
+#### GET /api/v1/meetings
+Lấy danh sách meetings.
+
+**Query Parameters:**
+- `status`: filter by status (scheduled, active, ended)
+- `page`: page number (default: 1)
+- `limit`: items per page (default: 20)
+
+**Response:** `200 OK`
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Weekly Standup",
+      "host_id": "uuid",
+      "status": "scheduled",
+      "scheduled_start": "2024-01-15T09:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 45
+  }
+}
+```
+
+#### POST /api/v1/meetings
+Tạo meeting mới.
+
+**Request:**
+```json
+{
+  "title": "Weekly Standup",
+  "description": "Team sync meeting",
+  "scheduled_start": "2024-01-15T09:00:00Z",
+  "scheduled_end": "2024-01-15T10:00:00Z",
+  "settings": {
+    "attention_threshold": 0.3,
+    "alert_enabled": true
+  }
+}
+```
+
+#### GET /api/v1/meetings/:id
+Lấy chi tiết meeting.
+
+#### PUT /api/v1/meetings/:id
+Cập nhật meeting.
+
+#### POST /api/v1/meetings/:id/start
+Bắt đầu meeting (chuyển status sang active).
+
+#### POST /api/v1/meetings/:id/end
+Kết thúc meeting.
+
+### 2.3 Participants
+
+#### GET /api/v1/meetings/:id/participants
+Lấy danh sách participants của meeting.
+
+**Response:** `200 OK`
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "user_id": "uuid",
+      "full_name": "John Doe",
+      "status": "joined",
+      "joined_at": "2024-01-15T09:02:00Z",
+      "current_attention": 0.85
+    }
+  ]
+}
+```
+
+#### POST /api/v1/meetings/:id/participants
+Thêm participant vào meeting.
+
+### 2.4 Analytics & Reports
+
+#### GET /api/v1/meetings/:id/analytics
+Lấy analytics real-time của meeting.
+
+**Response:** `200 OK`
+```json
+{
+  "meeting_id": "uuid",
+  "duration_seconds": 1800,
+  "participant_count": 8,
+  "avg_attention": 0.72,
+  "attention_timeline": [
+    {"time": "09:00", "score": 0.85},
+    {"time": "09:05", "score": 0.78}
+  ],
+  "participants": [
+    {
+      "id": "uuid",
+      "name": "John Doe",
+      "avg_attention": 0.82,
+      "alerts_count": 2
+    }
+  ]
+}
+```
+
+#### GET /api/v1/meetings/:id/report
+Lấy báo cáo tổng hợp sau meeting.
+
+### 2.5 Alerts
+
+#### GET /api/v1/meetings/:id/alerts
+Lấy danh sách alerts của meeting.
+
+**Query Parameters:**
+- `type`: filter by type (not_attentive, drowsy, looking_away)
+- `severity`: filter by severity (info, warning, critical)
+
+#### POST /api/v1/alerts/:id/acknowledge
+Acknowledge một alert.
+
+## 3. WebSocket API
+
+### 3.1 Connection
+```
+ws://localhost:8080/ws/meeting/:meeting_id?token=JWT_TOKEN
+```
+
+### 3.2 Client → Server Messages
+
+#### Join Meeting
+```json
+{
+  "type": "join",
+  "payload": {
+    "meeting_id": "uuid",
+    "user_id": "uuid"
+  }
+}
+```
+
+#### Send Video Frame
+```json
+{
+  "type": "frame",
+  "payload": {
+    "meeting_id": "uuid",
+    "timestamp": 1705312800000,
+    "frame": "base64_encoded_image"
+  }
+}
+```
+
+### 3.3 Server → Client Messages
+
+#### Attention Update
+```json
+{
+  "type": "attention_update",
+  "payload": {
+    "meeting_id": "uuid",
+    "timestamp": 1705312800000,
+    "participants": [
+      {
+        "id": "uuid",
+        "track_id": "1",
+        "attention_score": 0.85,
+        "gaze_score": 0.90,
+        "head_pose_score": 0.80,
+        "is_looking_away": false,
+        "is_drowsy": false,
+        "bbox": {"x": 100, "y": 50, "w": 150, "h": 180}
+      }
+    ]
+  }
+}
+```
+
+#### Alert Notification
+```json
+{
+  "type": "alert",
+  "payload": {
+    "id": "uuid",
+    "participant_id": "uuid",
+    "participant_name": "John Doe",
+    "alert_type": "not_attentive",
+    "severity": "warning",
+    "message": "Attention below threshold for 10 seconds"
+  }
+}
+```
+
+#### Participant Joined/Left
+```json
+{
+  "type": "participant_update",
+  "payload": {
+    "action": "joined",
+    "participant": {
+      "id": "uuid",
+      "name": "John Doe"
+    }
+  }
+}
+```
+
+## 4. Error Responses
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid request body",
+    "details": [
+      {"field": "email", "message": "Invalid email format"}
+    ]
+  }
+}
+```
+
+| HTTP Code | Error Code | Mô tả |
+|-----------|------------|-------|
+| 400 | VALIDATION_ERROR | Request không hợp lệ |
+| 401 | UNAUTHORIZED | Chưa đăng nhập |
+| 403 | FORBIDDEN | Không có quyền |
+| 404 | NOT_FOUND | Resource không tồn tại |
+| 429 | RATE_LIMITED | Quá nhiều requests |
+| 500 | INTERNAL_ERROR | Lỗi server |
+

@@ -1,0 +1,12 @@
+# NetworkPolicy disabled for now - cluster allows all internal traffic
+#
+# The restrictive NetworkPolicies were causing issues because:
+# 1. NamespaceSelector used `name: ingress-nginx` but namespace has `kubernetes.io/metadata.name: ingress-nginx`
+# 2. Policies were blocking internal pod-to-pod communication
+#
+# If you need strict network policies in the future, ensure:
+# - Use correct namespace label: kubernetes.io/metadata.name=ingress-nginx
+# - Add DNS egress rules (kube-system namespace, port 53 UDP/TCP)
+# - Add rules for all inter-service communication
+# - Test thoroughly before applying in production
+

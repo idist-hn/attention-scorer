@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: face-detection
+  namespace: attention-detection
+  labels:
+    app: face-detection
+    component: ai-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: face-detection
+  template:
+    metadata:
+      labels:
+        app: face-detection
+        component: ai-service
+    spec:
+      imagePullSecrets:
+        - name: regcred
+      containers:
+        - name: face-detection
+          image: registry.idist.dev/attention/face-detection:latest
+          ports:
+            - containerPort: 50052
+              name: grpc
+            - containerPort: 8052
+              name: http
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          envFrom:
+            - configMapRef:
+                name: attention-config
+            - secretRef:
+                name: attention-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8052
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8052
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      # Removed GPU nodeSelector for CPU-only deployment
+      # nodeSelector:
+      #   gpu: "true"
+      # tolerations:
+      #   - key: "nvidia.com/gpu"
+      #     operator: "Exists"
+      #     effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: face-detection
+  namespace: attention-detection
+spec:
+  selector:
+    app: face-detection
+  ports:
+    - port: 50052
+      targetPort: 50052
+      name: grpc
+    - port: 8052
+      targetPort: 8052
+      name: http
+  type: ClusterIP
+

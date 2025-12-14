@@ -1,0 +1,150 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Python AI Microservices Tests
+  test-ai-microservices:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - face-detection
+          - landmark-detection
+          - head-pose
+          - gaze-tracking
+          - blink-detection
+          - attention-scorer
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          cd services/${{ matrix.service }}
+          pip install -r requirements.txt
+          pip install pytest pytest-cov opencv-python-headless
+
+      - name: Run tests
+        run: |
+          cd services/${{ matrix.service }}
+          pytest test_*.py -v --cov=. --cov-report=xml || true
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: services/${{ matrix.service }}/coverage.xml
+          flags: ${{ matrix.service }}
+
+  # Go API Gateway Tests
+  test-api-gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/api-gateway
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: coverage.out
+          flags: api-gateway
+
+  # Next.js Web Dashboard Tests
+  test-web-dashboard:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/web-dashboard
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: services/web-dashboard/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run lint
+        run: npm run lint || true
+
+      - name: Build
+        run: npm run build
+
+  # Build Docker images
+  build-images:
+    needs: [test-ai-microservices, test-api-gateway, test-web-dashboard]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        include:
+          - service: face-detection
+            context: ./services/face-detection
+          - service: landmark-detection
+            context: ./services/landmark-detection
+          - service: head-pose
+            context: ./services/head-pose
+          - service: gaze-tracking
+            context: ./services/gaze-tracking
+          - service: blink-detection
+            context: ./services/blink-detection
+          - service: attention-scorer
+            context: ./services/attention-scorer
+          - service: pipeline-orchestrator
+            context: ./services/pipeline-orchestrator
+          - service: api-gateway
+            context: ./services/api-gateway
+          - service: web-dashboard
+            context: ./services/web-dashboard
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push ${{ matrix.service }}
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/attention-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+

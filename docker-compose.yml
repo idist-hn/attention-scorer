@@ -1,0 +1,267 @@
+services:
+  # ========================================
+  # AI Microservices (Python)
+  # ========================================
+
+  # Pipeline Orchestrator - Main entry point
+  pipeline-orchestrator:
+    build:
+      context: ./services/pipeline-orchestrator
+      dockerfile: Dockerfile
+    container_name: attention-pipeline-orchestrator
+    environment:
+      - GRPC_PORT=50051
+      - REST_PORT=8051
+      - REDIS_URL=redis://redis:6379
+      - FACE_DETECTION_URL=http://face-detection:8052
+      - LANDMARK_DETECTION_URL=http://landmark-detection:8053
+      - HEAD_POSE_URL=http://head-pose:8054
+      - GAZE_TRACKING_URL=http://gaze-tracking:8055
+      - BLINK_DETECTION_URL=http://blink-detection:8056
+      - ATTENTION_SCORER_URL=http://attention-scorer:8057
+    ports:
+      - "50051:50051"
+      - "8051:8051"
+    depends_on:
+      - face-detection
+      - landmark-detection
+      - head-pose
+      - gaze-tracking
+      - blink-detection
+      - attention-scorer
+      - redis
+    networks:
+      - attention-network
+
+  # Face Detection Service (YOLOv8)
+  face-detection:
+    build:
+      context: ./services/face-detection
+      dockerfile: Dockerfile
+    container_name: attention-face-detection
+    environment:
+      - GRPC_PORT=50052
+      - REST_PORT=8052
+      - DEVICE=cpu
+      - MODEL_PATH=yolov8n.pt
+    ports:
+      - "50052:50052"
+      - "8052:8052"
+    networks:
+      - attention-network
+
+  # Landmark Detection Service (MediaPipe)
+  landmark-detection:
+    build:
+      context: ./services/landmark-detection
+      dockerfile: Dockerfile
+    container_name: attention-landmark-detection
+    environment:
+      - GRPC_PORT=50053
+      - REST_PORT=8053
+    ports:
+      - "50053:50053"
+      - "8053:8053"
+    networks:
+      - attention-network
+
+  # Head Pose Estimation Service
+  head-pose:
+    build:
+      context: ./services/head-pose
+      dockerfile: Dockerfile
+    container_name: attention-head-pose
+    environment:
+      - GRPC_PORT=50054
+      - REST_PORT=8054
+    ports:
+      - "50054:50054"
+      - "8054:8054"
+    networks:
+      - attention-network
+
+  # Gaze Tracking Service
+  gaze-tracking:
+    build:
+      context: ./services/gaze-tracking
+      dockerfile: Dockerfile
+    container_name: attention-gaze-tracking
+    environment:
+      - GRPC_PORT=50055
+      - REST_PORT=8055
+    ports:
+      - "50055:50055"
+      - "8055:8055"
+    networks:
+      - attention-network
+
+  # Blink Detection Service
+  blink-detection:
+    build:
+      context: ./services/blink-detection
+      dockerfile: Dockerfile
+    container_name: attention-blink-detection
+    environment:
+      - GRPC_PORT=50056
+      - REST_PORT=8056
+    ports:
+      - "50056:50056"
+      - "8056:8056"
+    networks:
+      - attention-network
+
+  # Attention Scorer Service
+  attention-scorer:
+    build:
+      context: ./services/attention-scorer
+      dockerfile: Dockerfile
+    container_name: attention-attention-scorer
+    environment:
+      - GRPC_PORT=50057
+      - REST_PORT=8057
+    ports:
+      - "50057:50057"
+      - "8057:8057"
+    networks:
+      - attention-network
+
+  # Legacy AI Processor (monolithic - for testing)
+  ai-processor:
+    build:
+      context: ./services/ai-processor
+      dockerfile: Dockerfile
+    container_name: attention-ai-processor
+    environment:
+      - DEVICE=cpu
+      - MODEL_PATH=/app/models/yolov8n.pt
+      - LOG_LEVEL=INFO
+      - GRPC_PORT=50058
+    volumes:
+      - ./models:/app/models
+    ports:
+      - "50058:50058"
+    networks:
+      - attention-network
+
+  # ========================================
+  # API Gateway (Golang)
+  # ========================================
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: attention-api-gateway
+    environment:
+      - SERVER_PORT=8080
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=attention_db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - GRPC_PIPELINE_ADDR=pipeline-orchestrator:50051
+      - VIDEO_STORAGE_PATH=/app/recordings
+    ports:
+      - "8080:8080"
+    volumes:
+      - recordings-data:/app/recordings
+    depends_on:
+      - postgres
+      - redis
+      - pipeline-orchestrator
+    networks:
+      - attention-network
+
+  # Web Dashboard (Next.js)
+  web-dashboard:
+    build:
+      context: ./services/web-dashboard
+      dockerfile: Dockerfile
+    container_name: attention-web-dashboard
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api-gateway
+    networks:
+      - attention-network
+
+  # PostgreSQL Database
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    container_name: attention-postgres
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=attention_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - attention-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: attention-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - attention-network
+
+  # Prometheus (Monitoring)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: attention-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    volumes:
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - attention-network
+
+  # Grafana (Dashboards)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: attention-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - attention-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  recordings-data:
+
+networks:
+  attention-network:
+    driver: bridge
+

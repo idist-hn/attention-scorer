@@ -1,0 +1,86 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway metrics
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Pipeline Orchestrator (REST)
+  - job_name: 'pipeline-orchestrator'
+    static_configs:
+      - targets: ['pipeline-orchestrator:8000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Face Detection Service (REST)
+  - job_name: 'face-detection'
+    static_configs:
+      - targets: ['face-detection:8052']
+    metrics_path: '/metrics'
+    scrape_interval: 5s
+
+  # Landmark Detection Service (REST)
+  - job_name: 'landmark-detection'
+    static_configs:
+      - targets: ['landmark-detection:8053']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Head Pose Service (REST)
+  - job_name: 'head-pose'
+    static_configs:
+      - targets: ['head-pose:8054']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Gaze Tracking Service (REST)
+  - job_name: 'gaze-tracking'
+    static_configs:
+      - targets: ['gaze-tracking:8055']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Blink Detection Service (REST)
+  - job_name: 'blink-detection'
+    static_configs:
+      - targets: ['blink-detection:8056']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Attention Scorer Service (REST)
+  - job_name: 'attention-scorer'
+    static_configs:
+      - targets: ['attention-scorer:8057']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 15s
+
+  # PostgreSQL (via postgres_exporter if available)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+    scrape_interval: 30s
+

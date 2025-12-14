@@ -1,0 +1,73 @@
+groups:
+  - name: attention-detection-alerts
+    rules:
+      # High latency alert
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High latency on {{ $labels.job }}"
+          description: "95th percentile latency is above 500ms for 5 minutes"
+
+      # Service down alert
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "{{ $labels.job }} has been down for more than 1 minute"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate on {{ $labels.job }}"
+          description: "Error rate is above 5% for 5 minutes"
+
+      # GPU memory usage
+      - alert: HighGPUMemoryUsage
+        expr: gpu_memory_used_bytes / gpu_memory_total_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High GPU memory usage on {{ $labels.instance }}"
+          description: "GPU memory usage is above 90%"
+
+      # Low attention detection rate
+      - alert: LowDetectionRate
+        expr: rate(faces_detected_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: info
+        annotations:
+          summary: "Low face detection rate"
+          description: "Less than 1 face detected per second for 10 minutes"
+
+      # Pipeline processing time
+      - alert: SlowPipeline
+        expr: histogram_quantile(0.95, rate(pipeline_processing_seconds_bucket[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow pipeline processing"
+          description: "Pipeline 95th percentile is above 100ms"
+
+      # gRPC errors
+      - alert: GRPCErrors
+        expr: rate(grpc_server_handled_total{grpc_code!="OK"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "gRPC errors on {{ $labels.grpc_service }}"
+          description: "gRPC error rate above 0.1/s for 5 minutes"
+
