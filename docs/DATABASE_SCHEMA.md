@@ -17,13 +17,11 @@ Hệ thống sử dụng 2 database chính:
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash VARCHAR(255) NOT NULL,
-    full_name VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(255),
     avatar_url TEXT,
-    face_encoding BYTEA,          -- Stored face encoding for recognition
     created_at TIMESTAMPTZ DEFAULT NOW(),
-    updated_at TIMESTAMPTZ DEFAULT NOW(),
-    deleted_at TIMESTAMPTZ
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_users_email ON users(email);
@@ -37,19 +35,17 @@ CREATE TABLE meetings (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     host_id UUID NOT NULL REFERENCES users(id),
-    scheduled_start TIMESTAMPTZ,
-    scheduled_end TIMESTAMPTZ,
-    actual_start TIMESTAMPTZ,
-    actual_end TIMESTAMPTZ,
-    status VARCHAR(20) DEFAULT 'scheduled',  -- scheduled, active, ended, cancelled
-    settings JSONB DEFAULT '{}',
+    status VARCHAR(20) DEFAULT 'scheduled',  -- scheduled, active, ended
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_meetings_host ON meetings(host_id);
 CREATE INDEX idx_meetings_status ON meetings(status);
-CREATE INDEX idx_meetings_scheduled ON meetings(scheduled_start);
+```
+CREATE INDEX idx_meetings_status ON meetings(status);
 ```
 
 ### 2.3 Participants Table
@@ -58,19 +54,16 @@ CREATE INDEX idx_meetings_scheduled ON meetings(scheduled_start);
 CREATE TABLE participants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
-    user_id UUID REFERENCES users(id),
-    guest_name VARCHAR(255),          -- For guest participants
-    face_encoding BYTEA,              -- Session-specific face encoding
-    track_id VARCHAR(100),            -- ByteTrack assigned ID
+    user_id UUID NOT NULL REFERENCES users(id),
+    track_id INTEGER,                 -- Face tracking ID
     joined_at TIMESTAMPTZ,
     left_at TIMESTAMPTZ,
-    status VARCHAR(20) DEFAULT 'invited',  -- invited, joined, left
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_participants_meeting ON participants(meeting_id);
 CREATE INDEX idx_participants_user ON participants(user_id);
-CREATE INDEX idx_participants_track ON participants(meeting_id, track_id);
 ```
 
 ### 2.4 Alerts Table
@@ -80,12 +73,12 @@ CREATE TABLE alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
     participant_id UUID NOT NULL REFERENCES participants(id) ON DELETE CASCADE,
-    alert_type VARCHAR(50) NOT NULL,  -- not_attentive, drowsy, looking_away, absent
+    alert_type VARCHAR(50) NOT NULL,  -- not_attentive, looking_away, drowsy
     severity VARCHAR(20) NOT NULL,    -- info, warning, critical
     message TEXT,
-    triggered_at TIMESTAMPTZ NOT NULL,
-    acknowledged_at TIMESTAMPTZ,
-    metadata JSONB DEFAULT '{}'
+    duration_seconds FLOAT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    resolved_at TIMESTAMPTZ
 );
 
 CREATE INDEX idx_alerts_meeting ON alerts(meeting_id);
@@ -93,23 +86,23 @@ CREATE INDEX idx_alerts_participant ON alerts(participant_id);
 CREATE INDEX idx_alerts_type ON alerts(alert_type);
 ```
 
-### 2.5 Meeting Reports Table
+### 2.5 Meeting Summaries Table
 
 ```sql
-CREATE TABLE meeting_reports (
+CREATE TABLE meeting_summaries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
-    total_duration_seconds INTEGER,
+    meeting_id UUID UNIQUE NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    duration_minutes INTEGER,
+    participant_count INTEGER,
     avg_attention_score FLOAT,
     min_attention_score FLOAT,
     max_attention_score FLOAT,
     total_alerts INTEGER,
-    participant_count INTEGER,
-    summary JSONB,                    -- Detailed summary data
-    generated_at TIMESTAMPTZ DEFAULT NOW()
+    low_attention_segments INTEGER,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE UNIQUE INDEX idx_reports_meeting ON meeting_reports(meeting_id);
+CREATE UNIQUE INDEX idx_summaries_meeting ON meeting_summaries(meeting_id);
 ```
 
 ### 2.6 Video Analyses Table
@@ -120,8 +113,8 @@ CREATE TABLE video_analyses (
     user_id UUID NOT NULL REFERENCES users(id),
     filename VARCHAR(255) NOT NULL,
     file_path TEXT NOT NULL,
-    file_size BIGINT NOT NULL,
-    duration FLOAT DEFAULT 0,
+    file_size BIGINT,
+    duration FLOAT,
     status VARCHAR(20) DEFAULT 'pending',  -- pending, processing, completed, failed
     progress INTEGER DEFAULT 0,            -- 0-100
     results JSONB,                         -- Analysis results
@@ -134,28 +127,44 @@ CREATE INDEX idx_video_analyses_user ON video_analyses(user_id);
 CREATE INDEX idx_video_analyses_status ON video_analyses(status);
 ```
 
-### 2.7 Recordings Table
+### 2.7 Video Recordings Table
 
 ```sql
-CREATE TABLE recordings (
+CREATE TABLE video_recordings (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     meeting_id UUID REFERENCES meetings(id),
-    user_id UUID NOT NULL REFERENCES users(id),
+    user_id UUID REFERENCES users(id),
     filename VARCHAR(255) NOT NULL,
     file_path TEXT NOT NULL,
-    file_size BIGINT DEFAULT 0,
-    duration_seconds INTEGER DEFAULT 0,
+    file_size BIGINT,
+    duration_seconds FLOAT,
+    width INTEGER,
+    height INTEGER,
     format VARCHAR(20) DEFAULT 'webm',
-    status VARCHAR(20) DEFAULT 'recording',  -- recording, completed, failed
+    status VARCHAR(20) DEFAULT 'processing',  -- processing, ready, failed
+    alerts_data JSONB,                        -- JSON array of alerts
     alert_count INTEGER DEFAULT 0,
-    alerts_data JSONB,
-    timeline_data JSONB,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX idx_recordings_meeting ON recordings(meeting_id);
-CREATE INDEX idx_recordings_user ON recordings(user_id);
+CREATE INDEX idx_recordings_meeting ON video_recordings(meeting_id);
+CREATE INDEX idx_recordings_user ON video_recordings(user_id);
+```
+
+### 2.8 Detection Timeline Table
+
+```sql
+CREATE TABLE detection_timeline (
+    time TIMESTAMPTZ NOT NULL,
+    recording_id UUID NOT NULL REFERENCES video_recordings(id) ON DELETE CASCADE,
+    video_timestamp_ms BIGINT NOT NULL,
+    faces_data JSONB NOT NULL,                -- JSON array of face detections
+    avg_attention_score FLOAT
+);
+
+CREATE INDEX idx_timeline_recording ON detection_timeline(recording_id);
+CREATE INDEX idx_timeline_time ON detection_timeline(time);
 ```
 
 ## 3. TimescaleDB Schema (Attention Metrics)
@@ -171,36 +180,16 @@ CREATE TABLE attention_metrics (
     time TIMESTAMPTZ NOT NULL,
     meeting_id UUID NOT NULL,
     participant_id UUID NOT NULL,
-    track_id VARCHAR(100),
-    
-    -- Attention scores (0.0 - 1.0)
+
+    -- Attention scores (0.0 - 100.0)
     attention_score FLOAT NOT NULL,
     gaze_score FLOAT,
     head_pose_score FLOAT,
     eye_openness_score FLOAT,
-    
-    -- Raw measurements
-    head_yaw FLOAT,                   -- Góc quay ngang (-90 to 90)
-    head_pitch FLOAT,                 -- Góc gật đầu (-90 to 90)
-    head_roll FLOAT,                  -- Góc nghiêng (-90 to 90)
-    eye_aspect_ratio FLOAT,           -- EAR value
-    blink_rate FLOAT,                 -- Blinks per minute
-    perclos FLOAT,                    -- Percentage of eye closure
-    
-    -- Gaze direction
-    gaze_x FLOAT,                     -- Normalized gaze X (-1 to 1)
-    gaze_y FLOAT,                     -- Normalized gaze Y (-1 to 1)
-    
+
     -- Flags
-    is_present BOOLEAN DEFAULT true,
     is_looking_away BOOLEAN DEFAULT false,
-    is_drowsy BOOLEAN DEFAULT false,
-    
-    -- Bounding box (for visualization)
-    bbox_x INTEGER,
-    bbox_y INTEGER,
-    bbox_width INTEGER,
-    bbox_height INTEGER
+    is_drowsy BOOLEAN DEFAULT false
 );
 
 -- Convert to hypertable

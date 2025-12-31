@@ -139,45 +139,91 @@ Thêm participant vào meeting.
 
 ### 2.4 Analytics & Reports
 
-#### GET /api/v1/meetings/:id/analytics
-Lấy analytics real-time của meeting.
+#### GET /api/v1/analytics/meetings/:id/metrics
+Lấy attention metrics của meeting.
+
+**Query Parameters:**
+- `start`: ISO timestamp (optional)
+- `end`: ISO timestamp (optional)
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "time": "2024-01-15T09:00:00Z",
+    "meeting_id": "uuid",
+    "participant_id": "uuid",
+    "attention_score": 0.85,
+    "gaze_score": 0.90,
+    "head_pose_score": 0.80,
+    "eye_openness_score": 0.95,
+    "is_looking_away": false,
+    "is_drowsy": false
+  }
+]
+```
+
+#### GET /api/v1/analytics/meetings/:id/participants
+Lấy thống kê attention theo participant.
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "participant_id": "uuid",
+    "avg_attention": 0.82,
+    "min_attention": 0.45,
+    "max_attention": 0.98,
+    "total_samples": 150
+  }
+]
+```
+
+#### GET /api/v1/analytics/meetings/:id/alerts
+Lấy danh sách alerts của meeting.
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": "uuid",
+    "meeting_id": "uuid",
+    "participant_id": "uuid",
+    "alert_type": "not_attentive",
+    "severity": "warning",
+    "message": "Attention below threshold",
+    "duration_seconds": 15.5,
+    "created_at": "2024-01-15T09:15:00Z"
+  }
+]
+```
+
+#### GET /api/v1/analytics/meetings/:id/summary
+Lấy báo cáo tổng hợp meeting.
 
 **Response:** `200 OK`
 ```json
 {
+  "id": "uuid",
   "meeting_id": "uuid",
-  "duration_seconds": 1800,
+  "duration_minutes": 30,
   "participant_count": 8,
-  "avg_attention": 0.72,
-  "attention_timeline": [
-    {"time": "09:00", "score": 0.85},
-    {"time": "09:05", "score": 0.78}
-  ],
-  "participants": [
-    {
-      "id": "uuid",
-      "name": "John Doe",
-      "avg_attention": 0.82,
-      "alerts_count": 2
-    }
-  ]
+  "avg_attention_score": 0.72,
+  "min_attention_score": 0.35,
+  "max_attention_score": 0.95,
+  "total_alerts": 5,
+  "low_attention_segments": 3
 }
 ```
 
-#### GET /api/v1/meetings/:id/report
-Lấy báo cáo tổng hợp sau meeting.
-
 ### 2.5 Alerts
 
-#### GET /api/v1/meetings/:id/alerts
+#### GET /api/v1/analytics/meetings/:id/alerts
 Lấy danh sách alerts của meeting.
 
 **Query Parameters:**
 - `type`: filter by type (not_attentive, drowsy, looking_away)
 - `severity`: filter by severity (info, warning, critical)
-
-#### POST /api/v1/alerts/:id/acknowledge
-Acknowledge một alert.
 
 ### 2.6 Video Analysis (Offline)
 

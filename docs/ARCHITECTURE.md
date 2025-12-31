@@ -248,65 +248,69 @@ Hệ thống được thiết kế theo mô hình **Microservices** với các �
 
 ```yaml
 services:
-  pipeline-orchestrator:  # Main AI entry point
-  face-detection:         # GPU-capable
-  landmark-detection:     # CPU
-  head-pose:              # CPU (lightweight)
-  gaze-tracking:          # CPU (lightweight)
-  blink-detection:        # CPU (lightweight)
-  attention-scorer:       # CPU (lightweight)
-  api-gateway:            # Golang
-  web-dashboard:          # Next.js
-  postgres:               # TimescaleDB
-  redis:                  # Cache + Pub/Sub
-  prometheus:             # Monitoring
-  grafana:                # Dashboards
+  pipeline-orchestrator:  # Main AI entry point (:50051, :8051)
+  face-detection:         # YOLOv8 (:50052, :8052)
+  landmark-detection:     # MediaPipe (:50053, :8053)
+  head-pose:              # SolvePnP (:50054, :8054)
+  gaze-tracking:          # Iris-based (:50055, :8055)
+  blink-detection:        # EAR/PERCLOS (:50056, :8056)
+  attention-scorer:       # Weighted scoring (:50057, :8057)
+  api-gateway:            # Golang Fiber (:8080)
+  web-dashboard:          # Next.js (:3000)
+  postgres:               # TimescaleDB (:5432)
+  redis:                  # Cache + Pub/Sub (:6379)
+  prometheus:             # Monitoring (:9090)
+  grafana:                # Dashboards (:3001)
 ```
 
 ### 5.2 Kubernetes (Production)
 
+**Namespace**: `attention-detection`
+
+**Domains**:
+- Frontend: `https://attention-scorer.idist.dev`
+- API: `https://api.attention-scorer.idist.dev`
+
+**Registry**: `registry.idist.dev/attention/*`
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Kubernetes Cluster                         │
+│                   Kubernetes Cluster (Production)               │
 │  ┌────────────────────────────────────────────────────────────┐ │
-│  │                    Ingress Controller                      │ │
-│  └────────────────────────────┬───────────────────────────────┘ │
-│                               │                                 │
-│  ┌────────────┬───────────────┼───────────────┬───────────────┐ │
-│  │            │               │               │               │ │
-│  ▼            ▼               ▼               ▼               │ │
-│ ┌──────┐  ┌──────┐      ┌──────────┐    ┌─────────────┐       │ │
-│ │ Web  │  │ API  │      │ Pipeline │    │AI Services  │       │ │
-│ │(x3)  │  │(x3)  │      │Orchestr. │    │(Face Det x2)│       │ │
-│ └──────┘  └──────┘      │  (x2)    │    │ GPU Nodes   │       │ │
-│                         └──────────┘    └─────────────┘       │ │
-│                                                               │ │
-│  ┌──────────────────────────────────────────────────────────┐ │ │
-│  │                    StatefulSets                          │ │ │
-│  │  ┌──────────────┐  ┌──────────────┐                      │ │ │
-│  │  │  PostgreSQL  │  │    Redis     │                      │ │ │
-│  │  │  (Primary +  │  │   Cluster    │                      │ │ │
-│  │  │   Replica)   │  │    (x3)      │                      │ │ │
-│  │  └──────────────┘  └──────────────┘                      │ │ │
-│  └──────────────────────────────────────────────────────────┘ │ │
+│  │              Ingress (nginx + cert-manager)                │ │
+│  │   attention-scorer.idist.dev → web-dashboard:3000          │ │
+│  │   api.attention-scorer.idist.dev → api-gateway:8080        │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    Deployments                           │   │
+│  │  web-dashboard    api-gateway    pipeline-orchestrator   │   │
+│  │  face-detection   landmark-detection   head-pose         │   │
+│  │  gaze-tracking    blink-detection   attention-scorer     │   │
+│  └─────────────────────────────────────────────────────────┘   │
+│                                                                 │
+│  ┌─────────────────────────────────────────────────────────┐   │
+│  │                    StatefulSets                          │   │
+│  │         postgres-0              redis                    │   │
+│  └─────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 ## 6. Service Ports Summary
 
-| Service               | Port  | Protocol | Description          |
-| --------------------- | ----- | -------- | -------------------- |
-| Web Dashboard         | 3000  | HTTP     | Next.js frontend     |
-| API Gateway           | 8080  | HTTP/WS  | REST API + WebSocket |
-| Pipeline Orchestrator | 50051 | gRPC     | AI orchestration     |
-| Face Detection        | 50052 | gRPC     | YOLOv8 detection     |
-| Landmark Detection    | 50053 | gRPC     | MediaPipe FaceMesh   |
-| Head Pose             | 50054 | gRPC     | SolvePnP estimation  |
-| Gaze Tracking         | 50055 | gRPC     | Iris-based gaze      |
-| Blink Detection       | 50056 | gRPC     | EAR/PERCLOS          |
-| Attention Scorer      | 50057 | gRPC     | Score calculation    |
-| PostgreSQL            | 5432  | TCP      | Database             |
-| Redis                 | 6379  | TCP      | Cache/Pub-Sub        |
-| Prometheus            | 9090  | HTTP     | Metrics              |
-| Grafana               | 3001  | HTTP     | Dashboards           |
+| Service               | gRPC  | REST  | Protocol | Description          |
+| --------------------- | ----- | ----- | -------- | -------------------- |
+| Web Dashboard         | -     | 3000  | HTTP     | Next.js frontend     |
+| API Gateway           | -     | 8080  | HTTP/WS  | REST API + WebSocket |
+| Pipeline Orchestrator | 50051 | 8051  | gRPC/HTTP| AI orchestration     |
+| Face Detection        | 50052 | 8052  | gRPC/HTTP| YOLOv8 detection     |
+| Landmark Detection    | 50053 | 8053  | gRPC/HTTP| MediaPipe FaceMesh   |
+| Head Pose             | 50054 | 8054  | gRPC/HTTP| SolvePnP estimation  |
+| Gaze Tracking         | 50055 | 8055  | gRPC/HTTP| Iris-based gaze      |
+| Blink Detection       | 50056 | 8056  | gRPC/HTTP| EAR/PERCLOS          |
+| Attention Scorer      | 50057 | 8057  | gRPC/HTTP| Score calculation    |
+| PostgreSQL            | -     | 5432  | TCP      | TimescaleDB          |
+| Redis                 | -     | 6379  | TCP      | Cache/Pub-Sub        |
+| Prometheus            | -     | 9090  | HTTP     | Metrics              |
+| Grafana               | -     | 3001  | HTTP     | Dashboards           |
 

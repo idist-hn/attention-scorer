@@ -18,15 +18,15 @@ Hệ thống được thiết kế theo mô hình **Microservices** với các s
 
 ### AI Microservices (Python)
 
-| Service                   | Port  | Technology       | Chức năng                 |
-| ------------------------- | ----- | ---------------- | ------------------------- |
-| **Pipeline Orchestrator** | 50051 | gRPC + Redis     | Điều phối các AI services |
-| **Face Detection**        | 50052 | YOLOv8           | Phát hiện khuôn mặt (GPU) |
-| **Landmark Detection**    | 50053 | MediaPipe        | 478 facial landmarks      |
-| **Head Pose**             | 50054 | OpenCV SolvePnP  | Yaw, Pitch, Roll          |
-| **Gaze Tracking**         | 50055 | Iris Analysis    | Hướng nhìn                |
-| **Blink Detection**       | 50056 | EAR/PERCLOS      | Chớp mắt, drowsiness      |
-| **Attention Scorer**      | 50057 | Weighted Scoring | Attention score           |
+| Service                   | gRPC Port | REST Port | Technology       | Chức năng                 |
+| ------------------------- | --------- | --------- | ---------------- | ------------------------- |
+| **Pipeline Orchestrator** | 50051     | 8051      | gRPC + Redis     | Điều phối các AI services |
+| **Face Detection**        | 50052     | 8052      | YOLOv8           | Phát hiện khuôn mặt       |
+| **Landmark Detection**    | 50053     | 8053      | MediaPipe        | 478 facial landmarks      |
+| **Head Pose**             | 50054     | 8054      | OpenCV SolvePnP  | Yaw, Pitch, Roll          |
+| **Gaze Tracking**         | 50055     | 8055      | Iris Analysis    | Hướng nhìn                |
+| **Blink Detection**       | 50056     | 8056      | EAR/PERCLOS      | Chớp mắt, drowsiness      |
+| **Attention Scorer**      | 50057     | 8057      | Weighted Scoring | Attention score           |
 
 ### Backend & Frontend
 
@@ -51,6 +51,9 @@ attention-detection/
 │   ├── api-gateway/            # Golang API Gateway
 │   └── web-dashboard/          # Next.js Frontend
 ├── proto/                      # gRPC Protocol Buffers
+├── k8s/                        # Kubernetes manifests
+│   ├── base/                   # Base configurations
+│   └── overlays/               # Environment overlays (dev/prod)
 ├── docs/                       # Documentation
 ├── migrations/                 # Database migrations
 ├── monitoring/                 # Prometheus/Grafana configs
@@ -103,22 +106,30 @@ attention-detection/
 
 ## 🚀 Quick Start
 
+### Development (Docker Compose)
+
 ```bash
 # 1. Clone và chạy với Docker Compose
 docker-compose up -d
 
-# 2. Hoặc chạy từng service
-make run-ai    # AI Services
-make run-api   # API Gateway
-make run-web   # Web Dashboard
-
-# 3. Test microservices
-cd services/ai-processor && python3 ../test_microservices.py
-
-# 4. Access
+# 2. Access
 # - Web Dashboard: http://localhost:3000
 # - API Gateway: http://localhost:8080
 # - Grafana: http://localhost:3001
+```
+
+### Production (Kubernetes)
+
+```bash
+# Deploy lên K8s cluster
+kubectl apply -k k8s/overlays/prod
+
+# Hoặc từng bước
+kubectl apply -f k8s/base/namespace.yaml
+kubectl apply -f k8s/base/secrets.yaml
+kubectl apply -f k8s/base/postgres.yaml
+kubectl apply -f k8s/base/redis.yaml
+kubectl apply -f k8s/base/ -n attention-detection
 ```
 
 ## 🛠️ Yêu cầu hệ thống
