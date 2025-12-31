@@ -49,17 +49,17 @@ Hệ thống AI Processing đã được tách thành các microservices độc 
 
 ## Services
 
-| Service | Port | Technology | Description |
-|---------|------|------------|-------------|
-| **Pipeline Orchestrator** | 50051 | Python + gRPC | Điều phối các microservices |
-| **Face Detection** | 50052 | Python + YOLOv8 | Phát hiện khuôn mặt (GPU-capable) |
-| **Landmark Detection** | 50053 | Python + MediaPipe | Phát hiện 478 facial landmarks |
-| **Head Pose** | 50054 | Python + OpenCV | Ước lượng tư thế đầu (yaw, pitch, roll) |
-| **Gaze Tracking** | 50055 | Python | Theo dõi hướng nhìn dựa trên iris |
-| **Blink Detection** | 50056 | Python | Phát hiện chớp mắt + PERCLOS |
-| **Attention Scorer** | 50057 | Python | Tính điểm tập trung |
-| **API Gateway** | 8080 | Golang + Fiber | REST API + WebSocket |
-| **Web Dashboard** | 3000 | Next.js 14 | Giao diện người dùng |
+| Service                   | Port  | Technology         | Description                             |
+| ------------------------- | ----- | ------------------ | --------------------------------------- |
+| **Pipeline Orchestrator** | 50051 | Python + gRPC      | Điều phối các microservices             |
+| **Face Detection**        | 50052 | Python + YOLOv8    | Phát hiện khuôn mặt (GPU-capable)       |
+| **Landmark Detection**    | 50053 | Python + MediaPipe | Phát hiện 478 facial landmarks          |
+| **Head Pose**             | 50054 | Python + OpenCV    | Ước lượng tư thế đầu (yaw, pitch, roll) |
+| **Gaze Tracking**         | 50055 | Python             | Theo dõi hướng nhìn dựa trên iris       |
+| **Blink Detection**       | 50056 | Python             | Phát hiện chớp mắt + PERCLOS            |
+| **Attention Scorer**      | 50057 | Python             | Tính điểm tập trung                     |
+| **API Gateway**           | 8080  | Golang + Fiber     | REST API + WebSocket                    |
+| **Web Dashboard**         | 3000  | Next.js 14         | Giao diện người dùng                    |
 
 ## Benefits
 
@@ -132,12 +132,12 @@ curl http://localhost:50052/health
 
 ## Proto Files
 
-| Proto | Description |
-|-------|-------------|
-| `proto/face_detection.proto` | Face detection service definition |
-| `proto/landmark_detection.proto` | Landmark detection service definition |
-| `proto/head_pose.proto` | Head pose estimation service definition |
-| `proto/gaze_tracking.proto` | Gaze tracking service definition |
-| `proto/blink_detection.proto` | Blink detection service definition |
-| `proto/attention.proto` | Unified attention service (legacy) |
+| Proto                            | Description                             |
+| -------------------------------- | --------------------------------------- |
+| `proto/face_detection.proto`     | Face detection service definition       |
+| `proto/landmark_detection.proto` | Landmark detection service definition   |
+| `proto/head_pose.proto`          | Head pose estimation service definition |
+| `proto/gaze_tracking.proto`      | Gaze tracking service definition        |
+| `proto/blink_detection.proto`    | Blink detection service definition      |
+| `proto/attention.proto`          | Unified attention service (legacy)      |
 

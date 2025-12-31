@@ -112,6 +112,52 @@ CREATE TABLE meeting_reports (
 CREATE UNIQUE INDEX idx_reports_meeting ON meeting_reports(meeting_id);
 ```
 
+### 2.6 Video Analyses Table
+
+```sql
+CREATE TABLE video_analyses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id),
+    filename VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size BIGINT NOT NULL,
+    duration FLOAT DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'pending',  -- pending, processing, completed, failed
+    progress INTEGER DEFAULT 0,            -- 0-100
+    results JSONB,                         -- Analysis results
+    error_message TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_video_analyses_user ON video_analyses(user_id);
+CREATE INDEX idx_video_analyses_status ON video_analyses(status);
+```
+
+### 2.7 Recordings Table
+
+```sql
+CREATE TABLE recordings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    meeting_id UUID REFERENCES meetings(id),
+    user_id UUID NOT NULL REFERENCES users(id),
+    filename VARCHAR(255) NOT NULL,
+    file_path TEXT NOT NULL,
+    file_size BIGINT DEFAULT 0,
+    duration_seconds INTEGER DEFAULT 0,
+    format VARCHAR(20) DEFAULT 'webm',
+    status VARCHAR(20) DEFAULT 'recording',  -- recording, completed, failed
+    alert_count INTEGER DEFAULT 0,
+    alerts_data JSONB,
+    timeline_data JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_recordings_meeting ON recordings(meeting_id);
+CREATE INDEX idx_recordings_user ON recordings(user_id);
+```
+
 ## 3. TimescaleDB Schema (Attention Metrics)
 
 ### 3.1 Attention Metrics Hypertable

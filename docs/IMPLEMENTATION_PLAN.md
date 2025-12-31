@@ -2,16 +2,16 @@
 
 ## Tổng quan Timeline
 
-| Phase | Tên | Thời gian | Status |
-|-------|-----|-----------|--------|
-| 1 | Foundation & AI Core | 2 tuần | ✅ DONE |
-| 2 | API Gateway | 1.5 tuần | ✅ DONE |
-| 3 | Web Frontend | 1.5 tuần | ✅ DONE |
-| 4 | Integration & Testing | 1 tuần | ✅ DONE |
-| 5 | Production Ready | 1 tuần | ✅ DONE |
-| 6 | **Microservices Refactoring** | 1 tuần | ✅ DONE |
-| 7 | **Testing & Optimization** | 1 tuần | 🔄 IN PROGRESS |
-| 8 | **Production Deployment** | 1 tuần | ⏳ PENDING |
+| Phase | Tên                           | Thời gian | Status        |
+| ----- | ----------------------------- | --------- | ------------- |
+| 1     | Foundation & AI Core          | 2 tuần    | ✅ DONE        |
+| 2     | API Gateway                   | 1.5 tuần  | ✅ DONE        |
+| 3     | Web Frontend                  | 1.5 tuần  | ✅ DONE        |
+| 4     | Integration & Testing         | 1 tuần    | ✅ DONE        |
+| 5     | Production Ready              | 1 tuần    | ✅ DONE        |
+| 6     | **Microservices Refactoring** | 1 tuần    | ✅ DONE        |
+| 7     | **Testing & Optimization**    | 1 tuần    | 🔄 IN PROGRESS |
+| 8     | **Production Deployment**     | 1 tuần    | ⏳ PENDING     |
 
 **Tổng thời gian ước tính: 9 tuần**
 
@@ -331,24 +331,24 @@
 
 ## Risk Management
 
-| Risk | Impact | Mitigation |
-|------|--------|------------|
-| GPU performance issues | High | Early GPU testing, fallback to CPU |
-| WebSocket scalability | Medium | Load testing, horizontal scaling |
-| Face detection accuracy | High | Multiple model options, threshold tuning |
-| Browser compatibility | Medium | Feature detection, polyfills |
-| Microservice communication | Medium | Circuit breaker, retry logic |
-| Service discovery | Medium | Health checks, graceful degradation |
+| Risk                       | Impact | Mitigation                               |
+| -------------------------- | ------ | ---------------------------------------- |
+| GPU performance issues     | High   | Early GPU testing, fallback to CPU       |
+| WebSocket scalability      | Medium | Load testing, horizontal scaling         |
+| Face detection accuracy    | High   | Multiple model options, threshold tuning |
+| Browser compatibility      | Medium | Feature detection, polyfills             |
+| Microservice communication | Medium | Circuit breaker, retry logic             |
+| Service discovery          | Medium | Health checks, graceful degradation      |
 
 ## Success Criteria
 
-| Metric | Target | Current |
-|--------|--------|---------|
-| End-to-end latency | < 100ms | ~60ms ✅ |
-| FPS | >= 15 | ~17 FPS ✅ |
-| Face detection accuracy | > 95% | TBD |
-| Attention score accuracy | > 90% | TBD |
-| Concurrent meetings | 100+ | TBD |
-| Uptime | 99.9% | TBD |
-| Test coverage | >= 80% | TBD |
+| Metric                   | Target  | Current   |
+| ------------------------ | ------- | --------- |
+| End-to-end latency       | < 100ms | ~60ms ✅   |
+| FPS                      | >= 15   | ~17 FPS ✅ |
+| Face detection accuracy  | > 95%   | TBD       |
+| Attention score accuracy | > 90%   | TBD       |
+| Concurrent meetings      | 100+    | TBD       |
+| Uptime                   | 99.9%   | TBD       |
+| Test coverage            | >= 80%  | TBD       |
 

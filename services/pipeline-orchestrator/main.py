@@ -34,6 +34,11 @@ class FrameRequest(BaseModel):
     request_id: str = ""
 
 
+class VideoAnalysisRequest(BaseModel):
+    analysis_id: str
+    video_path: str
+
+
 class ProcessResponse(BaseModel):
     request_id: str
     meeting_id: str
@@ -397,6 +402,114 @@ def process_frame(request: FrameRequest):
         elapsed = time.time() - start_time
         metrics_data["processing_time_sum"] += elapsed
         metrics_data["processing_time_count"] += 1
+
+
+@app.post("/analyze-video")
+async def analyze_video(request: VideoAnalysisRequest):
+    """Analyze a video file for attention detection."""
+    global orchestrator_instance
+    if orchestrator_instance is None:
+        raise HTTPException(status_code=503, detail="Service not ready")
+
+    # Start async processing in background
+    import asyncio
+    asyncio.create_task(process_video_async(request.analysis_id, request.video_path))
+
+    return {"status": "processing", "analysis_id": request.analysis_id}
+
+
+async def process_video_async(analysis_id: str, video_path: str):
+    """Process video file asynchronously."""
+    global orchestrator_instance
+
+    api_gateway_url = os.getenv("API_GATEWAY_URL", "http://api-gateway:8080")
+
+    def update_progress(progress: int, status: str = "processing", **kwargs):
+        try:
+            data = {"progress": progress, "status": status, **kwargs}
+            requests.put(f"{api_gateway_url}/api/v1/video-analysis/{analysis_id}/progress", json=data, timeout=5)
+        except Exception as e:
+            logger.error(f"Failed to update progress: {e}")
+
+    try:
+        update_progress(0, "processing")
+
+        # Open video
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            update_progress(0, "failed", error="Cannot open video file")
+            return
+
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30
+        duration = total_frames / fps if fps > 0 else 0
+
+        # Process at 1 fps to save time
+        frame_interval = max(1, int(fps))
+
+        timeline = []
+        all_alerts = []
+        frame_idx = 0
+        processed = 0
+
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if frame_idx % frame_interval == 0:
+                # Encode frame
+                _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                frame_b64 = base64.b64encode(buffer).decode('utf-8')
+
+                # Process frame
+                result = orchestrator_instance.process_frame_rest(frame_b64, analysis_id, f"frame_{frame_idx}")
+
+                timestamp_ms = int((frame_idx / fps) * 1000)
+                avg_attention = 0
+                if result.get('participants'):
+                    scores = [p.get('attention_score', 0) for p in result['participants']]
+                    avg_attention = sum(scores) / len(scores) if scores else 0
+
+                    for p in result['participants']:
+                        for alert in p.get('alerts', []):
+                            all_alerts.append({**alert, 'timestamp_ms': timestamp_ms})
+
+                timeline.append({
+                    'timestamp_ms': timestamp_ms,
+                    'faces': result.get('participants', []),
+                    'avg_attention': avg_attention
+                })
+
+                processed += 1
+                progress = min(95, int((frame_idx / total_frames) * 100))
+                if processed % 10 == 0:
+                    update_progress(progress)
+
+            frame_idx += 1
+
+        cap.release()
+
+        # Calculate summary
+        avg_scores = [t['avg_attention'] for t in timeline if t['avg_attention'] > 0]
+        summary = {
+            'duration': duration,
+            'total_frames': total_frames,
+            'analyzed_frames': len(timeline),
+            'avg_attention': sum(avg_scores) / len(avg_scores) if avg_scores else 0,
+            'min_attention': min(avg_scores) if avg_scores else 0,
+            'max_attention': max(avg_scores) if avg_scores else 0,
+            'total_alerts': len(all_alerts),
+            'timeline': timeline,
+            'alerts': all_alerts
+        }
+
+        update_progress(100, "completed", duration=duration, results=json.dumps(summary))
+        logger.info(f"Video analysis completed: {analysis_id}")
+
+    except Exception as e:
+        logger.error(f"Video analysis failed: {e}")
+        update_progress(0, "failed", error=str(e))
 
 
 def run_rest_server(port: int):

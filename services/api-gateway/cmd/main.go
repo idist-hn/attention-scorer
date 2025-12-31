@@ -180,6 +180,16 @@ func main() {
 	recordings.Get("/:id/alerts", recordingHandler.GetAlerts)
 	recordings.Delete("/:id", recordingHandler.DeleteRecording)
 
+	// Video Analysis routes
+	videoAnalysisHandler := handlers.NewVideoAnalysisHandler(db)
+	videoAnalysis := protected.Group("/video-analysis")
+	videoAnalysis.Post("/upload", videoAnalysisHandler.Upload)
+	videoAnalysis.Get("/", videoAnalysisHandler.List)
+	videoAnalysis.Get("/:id", videoAnalysisHandler.GetByID)
+	videoAnalysis.Delete("/:id", videoAnalysisHandler.Delete)
+	// Internal endpoint for AI processor to update progress
+	api.Put("/video-analysis/:id/progress", videoAnalysisHandler.UpdateProgress)
+
 	// WebSocket routes
 	app.Use("/ws", ws.UpgradeMiddleware())
 	app.Get("/ws/meetings/:id", websocket.New(wsHandler.HandleConnection))

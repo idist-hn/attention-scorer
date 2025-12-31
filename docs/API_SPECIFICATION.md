@@ -2,11 +2,11 @@
 
 ## 1. Tổng quan
 
-| Protocol | Port | Mục đích |
-|----------|------|----------|
-| REST API | 8080 | CRUD operations, authentication |
-| WebSocket | 8080 | Real-time video streaming, attention updates |
-| gRPC | 50051 | Internal communication (Gateway ↔ AI Service) |
+| Protocol  | Port  | Mục đích                                      |
+| --------- | ----- | --------------------------------------------- |
+| REST API  | 8080  | CRUD operations, authentication               |
+| WebSocket | 8080  | Real-time video streaming, attention updates  |
+| gRPC      | 50051 | Internal communication (Gateway ↔ AI Service) |
 
 ## 2. REST API Endpoints
 
@@ -179,6 +179,94 @@ Lấy danh sách alerts của meeting.
 #### POST /api/v1/alerts/:id/acknowledge
 Acknowledge một alert.
 
+### 2.6 Video Analysis (Offline)
+
+Phân tích attention từ video file đã ghi sẵn.
+
+#### POST /api/v1/video-analysis/upload
+Upload video để phân tích attention offline.
+
+**Request:** `multipart/form-data`
+- `video`: Video file (MP4, WebM, AVI, MOV, MKV)
+
+**Response:** `201 Created`
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "filename": "meeting_recording.mp4",
+  "file_size": 52428800,
+  "status": "pending",
+  "progress": 0,
+  "created_at": "2024-01-15T10:30:00Z"
+}
+```
+
+#### GET /api/v1/video-analysis
+Lấy danh sách video analyses của user.
+
+**Response:** `200 OK`
+```json
+[
+  {
+    "id": "uuid",
+    "filename": "meeting_recording.mp4",
+    "file_size": 52428800,
+    "duration": 1800,
+    "status": "completed",
+    "progress": 100,
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+]
+```
+
+#### GET /api/v1/video-analysis/:id
+Lấy chi tiết và kết quả phân tích.
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid",
+  "filename": "meeting_recording.mp4",
+  "status": "completed",
+  "duration": 1800,
+  "results": {
+    "avg_attention": 72.5,
+    "min_attention": 35.0,
+    "max_attention": 95.0,
+    "total_alerts": 5,
+    "analyzed_frames": 900,
+    "timeline": [
+      {"timestamp_ms": 0, "avg_attention": 85.0, "faces": 3},
+      {"timestamp_ms": 2000, "avg_attention": 78.0, "faces": 3}
+    ],
+    "alerts": [
+      {"type": "low_attention", "severity": "warning", "timestamp_ms": 120000}
+    ]
+  }
+}
+```
+
+#### DELETE /api/v1/video-analysis/:id
+Xóa video analysis.
+
+### 2.7 Recordings
+
+#### POST /api/v1/recordings/start
+Bắt đầu recording session mới.
+
+#### POST /api/v1/recordings/:id/chunk
+Append video chunk vào recording đang chạy.
+
+#### POST /api/v1/recordings/:id/complete
+Hoàn thành recording session.
+
+#### GET /api/v1/recordings
+Lấy danh sách recordings.
+
+#### GET /api/v1/recordings/:id/stream
+Stream video recording.
+
 ## 3. WebSocket API
 
 ### 3.1 Connection
@@ -279,12 +367,12 @@ ws://localhost:8080/ws/meeting/:meeting_id?token=JWT_TOKEN
 }
 ```
 
-| HTTP Code | Error Code | Mô tả |
-|-----------|------------|-------|
-| 400 | VALIDATION_ERROR | Request không hợp lệ |
-| 401 | UNAUTHORIZED | Chưa đăng nhập |
-| 403 | FORBIDDEN | Không có quyền |
-| 404 | NOT_FOUND | Resource không tồn tại |
-| 429 | RATE_LIMITED | Quá nhiều requests |
-| 500 | INTERNAL_ERROR | Lỗi server |
+| HTTP Code | Error Code       | Mô tả                  |
+| --------- | ---------------- | ---------------------- |
+| 400       | VALIDATION_ERROR | Request không hợp lệ   |
+| 401       | UNAUTHORIZED     | Chưa đăng nhập         |
+| 403       | FORBIDDEN        | Không có quyền         |
+| 404       | NOT_FOUND        | Resource không tồn tại |
+| 429       | RATE_LIMITED     | Quá nhiều requests     |
+| 500       | INTERNAL_ERROR   | Lỗi server             |
 

@@ -97,45 +97,47 @@ Hệ thống được thiết kế theo mô hình **Microservices** với các �
 
 ### 3.1 Web Client (Next.js 14)
 
-| Module | File | Chức năng |
-|--------|------|-----------|
-| Video Capture | `components/VideoFeed.tsx` | Thu video từ webcam qua WebRTC |
-| Dashboard UI | `app/page.tsx` | Hiển thị attention grid, participant list |
-| Real-time Charts | `components/AttentionChart.tsx` | Biểu đồ attention timeline |
-| Alerts Panel | `components/AlertPanel.tsx` | Hiển thị và quản lý alerts |
-| State Management | `store/index.ts` | Zustand stores (Auth, Meeting, Alert) |
+| Module           | File                            | Chức năng                                 |
+| ---------------- | ------------------------------- | ----------------------------------------- |
+| Video Capture    | `components/VideoFeed.tsx`      | Thu video từ webcam qua WebRTC            |
+| Dashboard UI     | `app/page.tsx`                  | Hiển thị attention grid, participant list |
+| Real-time Charts | `components/AttentionChart.tsx` | Biểu đồ attention timeline                |
+| Alerts Panel     | `components/AlertPanel.tsx`     | Hiển thị và quản lý alerts                |
+| Video Analysis   | `app/analyze/page.tsx`          | Upload video, hiển thị kết quả phân tích  |
+| State Management | `store/index.ts`                | Zustand stores (Auth, Meeting, Alert)     |
 
 ### 3.2 API Gateway (Golang Fiber)
 
-| Module | File | Chức năng |
-|--------|------|-----------|
-| REST API | `handlers/*.go` | CRUD operations cho meetings, users, reports |
-| WebSocket Hub | `websocket/hub.go` | Quản lý connections, room-based broadcast |
-| Auth Middleware | `middleware/auth.go` | JWT authentication với bcrypt |
-| Rate Limiter | `middleware/ratelimit.go` | Token bucket rate limiting |
-| gRPC Client | `services/grpc_client.go` | Connection pooling đến AI services |
-| Redis Service | `services/redis.go` | Caching + Pub/Sub |
+| Module          | File                           | Chức năng                                    |
+| --------------- | ------------------------------ | -------------------------------------------- |
+| REST API        | `handlers/*.go`                | CRUD operations cho meetings, users, reports |
+| Video Analysis  | `handlers/video_analysis.go`   | Upload và phân tích video offline            |
+| Video Analyzer  | `services/video_analyzer.go`   | Xử lý video với FFmpeg, gọi AI pipeline      |
+| WebSocket Hub   | `websocket/hub.go`             | Quản lý connections, room-based broadcast    |
+| Auth Middleware | `middleware/auth.go`           | JWT authentication với bcrypt                |
+| gRPC Client     | `services/grpc_client.go`      | Connection pooling đến AI services           |
+| Redis Service   | `services/redis.go`            | Caching + Pub/Sub                            |
 
 ### 3.3 AI Microservices (Python)
 
-| Service | Port | Technology | Chức năng |
-|---------|------|------------|-----------|
-| **Pipeline Orchestrator** | 50051 | gRPC + Redis | Điều phối tất cả AI services |
-| **Face Detection** | 50052 | YOLOv8 | Phát hiện khuôn mặt (GPU-capable) |
-| **Landmark Detection** | 50053 | MediaPipe FaceMesh | Phát hiện 478 facial landmarks |
-| **Head Pose** | 50054 | OpenCV SolvePnP | Ước lượng yaw, pitch, roll |
-| **Gaze Tracking** | 50055 | Iris Analysis | Theo dõi hướng nhìn |
-| **Blink Detection** | 50056 | EAR/PERCLOS | Phát hiện chớp mắt, drowsiness |
-| **Attention Scorer** | 50057 | Weighted Scoring | Tính toán attention score |
+| Service                   | Port  | Technology         | Chức năng                         |
+| ------------------------- | ----- | ------------------ | --------------------------------- |
+| **Pipeline Orchestrator** | 50051 | gRPC + Redis       | Điều phối tất cả AI services      |
+| **Face Detection**        | 50052 | YOLOv8             | Phát hiện khuôn mặt (GPU-capable) |
+| **Landmark Detection**    | 50053 | MediaPipe FaceMesh | Phát hiện 478 facial landmarks    |
+| **Head Pose**             | 50054 | OpenCV SolvePnP    | Ước lượng yaw, pitch, roll        |
+| **Gaze Tracking**         | 50055 | Iris Analysis      | Theo dõi hướng nhìn               |
+| **Blink Detection**       | 50056 | EAR/PERCLOS        | Phát hiện chớp mắt, drowsiness    |
+| **Attention Scorer**      | 50057 | Weighted Scoring   | Tính toán attention score         |
 
 ### 3.4 Data Storage
 
-| Service | Technology | Chức năng |
-|---------|------------|-----------|
-| PostgreSQL | TimescaleDB | Meeting data, user accounts |
-| Redis | Redis 7 | Real-time cache, Pub/Sub, session |
-| Prometheus | Metrics | System monitoring |
-| Grafana | Dashboards | Visualization |
+| Service    | Technology  | Chức năng                         |
+| ---------- | ----------- | --------------------------------- |
+| PostgreSQL | TimescaleDB | Meeting data, user accounts       |
+| Redis      | Redis 7     | Real-time cache, Pub/Sub, session |
+| Prometheus | Metrics     | System monitoring                 |
+| Grafana    | Dashboards  | Visualization                     |
 
 ## 4. Communication Patterns
 
@@ -185,7 +187,47 @@ Hệ thống được thiết kế theo mô hình **Microservices** với các �
                          └──────────────────────────┘
 ```
 
-### 4.2 gRPC Service Communication
+### 4.2 Video Analysis Flow (Offline)
+
+```
+┌──────────────────────────┐
+│      Web Client          │
+│   (Video Upload Form)    │
+└───────────┬──────────────┘
+            │ POST /api/v1/video-analysis/upload
+            ▼
+┌──────────────────────────┐
+│      API Gateway         │
+│   (Video Analyzer)       │
+└───────────┬──────────────┘
+            │ FFmpeg extract frames
+            ▼
+┌──────────────────────────┐
+│  Pipeline Orchestrator   │
+│   (Process each frame)   │
+└───────────┬──────────────┘
+            │ gRPC calls
+            ▼
+┌──────────────────────────┐
+│    AI Services           │
+│ Face → Landmark → Pose   │
+│ → Gaze → Blink → Score   │
+└───────────┬──────────────┘
+            │
+            ▼
+┌──────────────────────────┐
+│    Results Aggregation   │
+│ Timeline, Alerts, Stats  │
+└───────────┬──────────────┘
+            │ Save to PostgreSQL
+            ▼
+┌──────────────────────────┐
+│      Web Client          │
+│  (Results Dashboard)     │
+└──────────────────────────┘
+```
+
+### 4.3 gRPC Service Communication
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -225,22 +267,22 @@ services:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      Kubernetes Cluster                          │
-│  ┌─────────────────────────────────────────────────────────────┐ │
-│  │                    Ingress Controller                        │ │
-│  └────────────────────────────┬────────────────────────────────┘ │
-│                               │                                   │
-│  ┌────────────┬───────────────┼───────────────┬────────────────┐ │
-│  │            │               │               │                │ │
-│  ▼            ▼               ▼               ▼                │ │
+│                      Kubernetes Cluster                         │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │                    Ingress Controller                      │ │
+│  └────────────────────────────┬───────────────────────────────┘ │
+│                               │                                 │
+│  ┌────────────┬───────────────┼───────────────┬───────────────┐ │
+│  │            │               │               │               │ │
+│  ▼            ▼               ▼               ▼               │ │
 │ ┌──────┐  ┌──────┐      ┌──────────┐    ┌─────────────┐       │ │
 │ │ Web  │  │ API  │      │ Pipeline │    │AI Services  │       │ │
 │ │(x3)  │  │(x3)  │      │Orchestr. │    │(Face Det x2)│       │ │
 │ └──────┘  └──────┘      │  (x2)    │    │ GPU Nodes   │       │ │
 │                         └──────────┘    └─────────────┘       │ │
-│                                                                │ │
+│                                                               │ │
 │  ┌──────────────────────────────────────────────────────────┐ │ │
-│  │                    StatefulSets                           │ │ │
+│  │                    StatefulSets                          │ │ │
 │  │  ┌──────────────┐  ┌──────────────┐                      │ │ │
 │  │  │  PostgreSQL  │  │    Redis     │                      │ │ │
 │  │  │  (Primary +  │  │   Cluster    │                      │ │ │
@@ -252,19 +294,19 @@ services:
 
 ## 6. Service Ports Summary
 
-| Service | Port | Protocol | Description |
-|---------|------|----------|-------------|
-| Web Dashboard | 3000 | HTTP | Next.js frontend |
-| API Gateway | 8080 | HTTP/WS | REST API + WebSocket |
-| Pipeline Orchestrator | 50051 | gRPC | AI orchestration |
-| Face Detection | 50052 | gRPC | YOLOv8 detection |
-| Landmark Detection | 50053 | gRPC | MediaPipe FaceMesh |
-| Head Pose | 50054 | gRPC | SolvePnP estimation |
-| Gaze Tracking | 50055 | gRPC | Iris-based gaze |
-| Blink Detection | 50056 | gRPC | EAR/PERCLOS |
-| Attention Scorer | 50057 | gRPC | Score calculation |
-| PostgreSQL | 5432 | TCP | Database |
-| Redis | 6379 | TCP | Cache/Pub-Sub |
-| Prometheus | 9090 | HTTP | Metrics |
-| Grafana | 3001 | HTTP | Dashboards |
+| Service               | Port  | Protocol | Description          |
+| --------------------- | ----- | -------- | -------------------- |
+| Web Dashboard         | 3000  | HTTP     | Next.js frontend     |
+| API Gateway           | 8080  | HTTP/WS  | REST API + WebSocket |
+| Pipeline Orchestrator | 50051 | gRPC     | AI orchestration     |
+| Face Detection        | 50052 | gRPC     | YOLOv8 detection     |
+| Landmark Detection    | 50053 | gRPC     | MediaPipe FaceMesh   |
+| Head Pose             | 50054 | gRPC     | SolvePnP estimation  |
+| Gaze Tracking         | 50055 | gRPC     | Iris-based gaze      |
+| Blink Detection       | 50056 | gRPC     | EAR/PERCLOS          |
+| Attention Scorer      | 50057 | gRPC     | Score calculation    |
+| PostgreSQL            | 5432  | TCP      | Database             |
+| Redis                 | 6379  | TCP      | Cache/Pub-Sub        |
+| Prometheus            | 9090  | HTTP     | Metrics              |
+| Grafana               | 3001  | HTTP     | Dashboards           |
 

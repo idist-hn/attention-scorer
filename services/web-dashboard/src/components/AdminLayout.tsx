@@ -6,7 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store';
 import {
   LayoutDashboard, Video, Users, Settings, LogOut, Menu, X,
-  BarChart3, Bell, User, ChevronDown
+  BarChart3, Bell, User, ChevronDown, FileVideo
 } from 'lucide-react';
 
 const navigation = [
@@ -14,6 +14,7 @@ const navigation = [
   { name: 'Meetings', href: '/admin/meetings', icon: Video },
   { name: 'Users', href: '/admin/users', icon: Users },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
+  { name: 'Video Analysis', href: '/analyze', icon: FileVideo },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 

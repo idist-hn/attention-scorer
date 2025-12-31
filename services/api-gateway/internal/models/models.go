@@ -124,3 +124,20 @@ type DetectionTimeline struct {
 func (DetectionTimeline) TableName() string {
 	return "detection_timeline"
 }
+
+// VideoAnalysis stores video analysis jobs for offline attention detection
+type VideoAnalysis struct {
+	ID           uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:gen_random_uuid()"`
+	UserID       uuid.UUID `json:"user_id" gorm:"type:uuid;not null"`
+	User         User      `json:"user,omitempty" gorm:"foreignKey:UserID"`
+	Filename     string    `json:"filename" gorm:"not null"`
+	FilePath     string    `json:"file_path" gorm:"not null"`
+	FileSize     int64     `json:"file_size"`
+	Duration     float64   `json:"duration"`
+	Status       string    `json:"status" gorm:"default:'pending'"` // pending, processing, completed, failed
+	Progress     int       `json:"progress" gorm:"default:0"`       // 0-100
+	Results      string    `json:"results" gorm:"type:jsonb"`       // JSON results
+	ErrorMessage string    `json:"error_message,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}

@@ -18,22 +18,22 @@ Hệ thống được thiết kế theo mô hình **Microservices** với các s
 
 ### AI Microservices (Python)
 
-| Service | Port | Technology | Chức năng |
-|---------|------|------------|-----------|
-| **Pipeline Orchestrator** | 50051 | gRPC + Redis | Điều phối các AI services |
-| **Face Detection** | 50052 | YOLOv8 | Phát hiện khuôn mặt (GPU) |
-| **Landmark Detection** | 50053 | MediaPipe | 478 facial landmarks |
-| **Head Pose** | 50054 | OpenCV SolvePnP | Yaw, Pitch, Roll |
-| **Gaze Tracking** | 50055 | Iris Analysis | Hướng nhìn |
-| **Blink Detection** | 50056 | EAR/PERCLOS | Chớp mắt, drowsiness |
-| **Attention Scorer** | 50057 | Weighted Scoring | Attention score |
+| Service                   | Port  | Technology       | Chức năng                 |
+| ------------------------- | ----- | ---------------- | ------------------------- |
+| **Pipeline Orchestrator** | 50051 | gRPC + Redis     | Điều phối các AI services |
+| **Face Detection**        | 50052 | YOLOv8           | Phát hiện khuôn mặt (GPU) |
+| **Landmark Detection**    | 50053 | MediaPipe        | 478 facial landmarks      |
+| **Head Pose**             | 50054 | OpenCV SolvePnP  | Yaw, Pitch, Roll          |
+| **Gaze Tracking**         | 50055 | Iris Analysis    | Hướng nhìn                |
+| **Blink Detection**       | 50056 | EAR/PERCLOS      | Chớp mắt, drowsiness      |
+| **Attention Scorer**      | 50057 | Weighted Scoring | Attention score           |
 
 ### Backend & Frontend
 
-| Component | Port | Technology | Chức năng |
-|-----------|------|------------|-----------|
-| **API Gateway** | 8080 | Golang + Fiber | REST API, WebSocket, Auth |
-| **Web Dashboard** | 3000 | Next.js 14 | Real-time visualization |
+| Component         | Port | Technology     | Chức năng                 |
+| ----------------- | ---- | -------------- | ------------------------- |
+| **API Gateway**   | 8080 | Golang + Fiber | REST API, WebSocket, Auth |
+| **Web Dashboard** | 3000 | Next.js 14     | Real-time visualization   |
 
 ## 📁 Cấu trúc Project
 
@@ -75,17 +75,31 @@ attention-detection/
 - 📝 Meeting Summary Report
 - 👥 Participant Engagement Metrics
 
+### Video Analysis (Offline)
+- 📹 Upload video files for offline analysis
+- 📊 Attention timeline visualization
+- 📈 Summary statistics (avg, min, max attention)
+- 🔔 Alert detection throughout video
+- 📁 Support MP4, WebM, AVI, MOV, MKV formats
+
+## 🌐 Production URLs
+
+| Service | URL |
+|---------|-----|
+| Web Dashboard | https://attention-scorer.idist.dev |
+| API Gateway | https://api.attention-scorer.idist.dev |
+
 ## 📚 Tài liệu
 
-| Tài liệu | Mô tả |
-|----------|-------|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Kiến trúc microservices chi tiết |
-| [MICROSERVICES.md](./MICROSERVICES.md) | Hướng dẫn AI Microservices |
-| [TECH_STACK.md](./TECH_STACK.md) | Công nghệ sử dụng |
-| [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md) | Thiết kế database |
-| [API_SPECIFICATION.md](./API_SPECIFICATION.md) | Đặc tả API |
-| [ATTENTION_ALGORITHM.md](./ATTENTION_ALGORITHM.md) | Thuật toán Attention |
-| [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) | Kế hoạch triển khai |
+| Tài liệu                                           | Mô tả                            |
+| -------------------------------------------------- | -------------------------------- |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)               | Kiến trúc microservices chi tiết |
+| [MICROSERVICES.md](./MICROSERVICES.md)             | Hướng dẫn AI Microservices       |
+| [TECH_STACK.md](./TECH_STACK.md)                   | Công nghệ sử dụng                |
+| [DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)         | Thiết kế database                |
+| [API_SPECIFICATION.md](./API_SPECIFICATION.md)     | Đặc tả API                       |
+| [ATTENTION_ALGORITHM.md](./ATTENTION_ALGORITHM.md) | Thuật toán Attention             |
+| [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) | Kế hoạch triển khai              |
 
 ## 🚀 Quick Start
 
@@ -124,12 +138,12 @@ cd services/ai-processor && python3 ../test_microservices.py
 
 ## 📊 Performance
 
-| Metric | Value |
-|--------|-------|
-| Processing Time | ~58ms/frame (CPU) |
-| FPS | ~17 FPS |
-| Latency | <100ms end-to-end |
-| Memory | ~2GB per AI service |
+| Metric          | Value               |
+| --------------- | ------------------- |
+| Processing Time | ~58ms/frame (CPU)   |
+| FPS             | ~17 FPS             |
+| Latency         | <100ms end-to-end   |
+| Memory          | ~2GB per AI service |
 
 ## 📄 License
 
